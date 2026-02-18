@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>GlyphScope</title>
+  <meta name="description" content="Understand what a regex pattern does — safely and with intent. Offline, deterministic, no generators." />
+
+  <!-- Silence favicon 404 -->
+  <link rel="icon" href="data:," />
+
+  <style>
+    :root{
+      --bg0:#070a10;
+      --bg1:#0b1020;
+      --card: rgba(20, 26, 40, .72);
+      --card2: rgba(20, 26, 40, .55);
+      --border: rgba(120, 140, 190, .18);
+      --text:#e7eaf2;
+      --muted: rgba(231,234,242,.72);
+      --accent: #4dd4ff;
+      --good: #35d07f;
+      --warn: #f5c451;
+      --bad:  #ff5d6c;
+      --shadow: 0 18px 50px rgba(0,0,0,.45);
+      --radius: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    html,body{
+      margin:0; padding:0;
+      color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background:
+        radial-gradient(1200px 800px at 20% 10%, rgba(77,212,255,.12), transparent 60%),
+        radial-gradient(900px 700px at 80% 0%, rgba(148,93,255,.10), transparent 55%),
+        radial-gradient(900px 700px at 50% 100%, rgba(53,208,127,.08), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      min-height:100%;
+    }
+
+    /* Top bar */
+    header.topbar{
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 22px;
+
+      background: linear-gradient(
+        180deg,
+        rgba(10,14,24,.85),
+        rgba(10,14,24,.55)
+      );
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar-left{
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .logo-dot{
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 30% 30%, #4dd4ff, #6b7cff 40%, #0000 70%),
+        #1b2238;
+      box-shadow: 0 0 0 1px rgba(120,140,190,.25);
+      flex: 0 0 auto;
+    }
+
+    .title-wrap{ min-width: 0; }
+    .title{
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .subtitle{
+      font-size: 12px;
+      color: rgba(231,234,242,.65);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* App container */
+    #app{
+      max-width: 1180px;
+      margin: 18px auto 28px;
+      padding: 0 18px;
+    }
+
+    /* Split layout */
+    #layout{
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 18px;
+    }
+    @media (max-width: 900px){
+      #layout{
+        grid-template-columns: 1fr;
+      }
+      header.topbar{
+        position: static;
+      }
+      .subtitle{ display:none; }
+    }
+
+    section.left, section.right{
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Cards */
+    .row{
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    label{
+      display:block;
+      font-weight:600;
+      margin: 0 0 8px 2px;
+      color: rgba(231,234,242,.88);
+      letter-spacing:.2px;
+    }
+
+    input, textarea{
+      width:100%;
+      box-sizing:border-box;
+      background: rgba(10, 14, 24, .75);
+      color: var(--text);
+      border: 1px solid rgba(120, 140, 190, .22);
+      border-radius: 12px;
+      padding: 12px 12px;
+      outline: none;
+      font-family: var(--mono);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    textarea{ min-height: 140px; resize: vertical; }
+
+    input:focus, textarea:focus{
+      border-color: rgba(77,212,255,.55);
+      box-shadow: 0 0 0 3px rgba(77,212,255,.15);
+    }
+
+    .hint{
+      margin-top: 8px;
+      font-size: 12px;
+      color: rgba(231,234,242,.55);
+      font-family: var(--mono);
+    }
+
+    /* Buttons */
+    button{
+      background: rgba(13, 18, 32, .9);
+      color: var(--text);
+      border: 1px solid rgba(120,140,190,.25);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 700;
+      letter-spacing: .2px;
+      cursor:pointer;
+      transition: transform .05s ease, border-color .15s ease, background .15s ease;
+    }
+    button:hover{ border-color: rgba(77,212,255,.55); }
+    button:active{ transform: translateY(1px); }
+
+    button.primary{
+      background: linear-gradient(135deg, #4dd4ff, #6b7cff);
+      color: #0b1020;
+      border: none;
+      font-weight: 800;
+    }
+
+    /* Controls row */
+    .controls{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap: wrap;
+    }
+
+    /* Flags */
+    .flags{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+    .flags label{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin:0;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(120,140,190,.20);
+      background: rgba(10, 14, 24, .55);
+      font-family: var(--mono);
+      font-size: 13px;
+      color: rgba(231,234,242,.86);
+      user-select:none;
+    }
+    .flags input{ width:auto; }
+
+    /* Status bar */
+    .status-bar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+    .status-bar span{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(120,140,190,.18);
+      background: rgba(10, 14, 24, .50);
+      font-family: var(--mono);
+      font-size: 13px;
+      color: rgba(231,234,242,.84);
+      min-height: 18px;
+    }
+
+    /* Outputs */
+    .output{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      min-height: 54px;
+    }
+
+    /* Explanation HTML formatting */
+    .exp-section{
+      margin: 8px 0 10px;
+    }
+    .exp-section strong{
+      color: rgba(231,234,242,.92);
+    }
+    .exp-section ul{
+      margin: 8px 0 0 18px;
+      padding: 0;
+      color: rgba(231,234,242,.82);
+    }
+    .exp-section li{
+      margin: 6px 0;
+      line-height: 1.45;
+    }
+
+    /* Preview highlight spans (ui.js uses .highlight) */
+    .highlight{
+      background: rgba(77,212,255,.18);
+      border: 1px solid rgba(77,212,255,.28);
+      border-radius: 6px;
+      padding: 0 2px;
+    }
+
+    .limit-msg{
+      margin-top: 10px;
+      font-family: var(--mono);
+      color: rgba(231,234,242,.62);
+      font-size: 12px;
+    }
+
+    .output:empty::before{
+      content: "—";
+      color: rgba(231,234,242,.35);
+    }
+
+    /* Risks overlay exists for JS, hidden by default */
+    #overlay-risks{ display:none; }
+
+.panel{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.panel-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(120,140,190,.14);
+  background: rgba(10, 14, 24, .35);
+}
+
+.panel-title{
+  font-weight: 800;
+  letter-spacing: .25px;
+  font-size: 13px;
+  color: rgba(231,234,242,.88);
+}
+
+.panel-subtle{
+  font-size: 11px;
+  color: rgba(231,234,242,.58);
+}
+
+.output-body{
+  padding: 14px;
+  min-height: 54px;
+}
+
+.output-body:empty::before{
+  content: "—";
+  color: rgba(231,234,242,.35);
+}
+
+.brand-logo{
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(120,140,190,.25);
+}
+
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <img class="brand-logo" src="./logo.png" alt="FrostedLogic" />
+	<div class="title-wrap">
+        <div class="title">GlyphScope</div>
+        <div class="subtitle">Understand what a pattern does — safely and with intent.</div>
+      </div>
+    </div>
+
+  </header>
+
+  <div id="app">
+    <div id="layout">
+
+      <!-- LEFT: Inputs -->
+      <section class="left">
+
+        <div class="row">
+          <label for="input-pattern">Regex Pattern</label>
+          <input id="input-pattern" type="text" placeholder="e.g. cat | ^\w+@\w+\.\w+$  (no /slashes/)" />
+          <div class="hint">Tip: Enter the pattern body only (no surrounding /.../).</div>
+        </div>
+
+        <div class="row">
+          <label for="input-sample">Sample Text (optional)</label>
+          <textarea id="input-sample" placeholder="Text to test against the regex"></textarea>
+        </div>
+
+        <div class="row controls">
+          <button id="btn-run">Analyze</button>
+        </div>
+
+        <div class="row flags">
+          <label><input type="checkbox" id="flag-g" /> g</label>
+          <label><input type="checkbox" id="flag-i" /> i</label>
+          <label><input type="checkbox" id="flag-m" /> m</label>
+          <label><input type="checkbox" id="flag-s" /> s</label>
+          <label><input type="checkbox" id="flag-u" /> u</label>
+          <label><input type="checkbox" id="flag-y" /> y</label>
+        </div>
+
+      </section>
+
+      <!-- RIGHT: Outputs -->
+      <section class="right">
+
+        <div class="row status-bar">
+          <span id="status-compiled"></span>
+          <span id="status-matches"></span>
+          <span id="status-perf"></span>
+        </div>
+
+<div class="panel">
+  <div class="panel-head">
+    <div class="panel-title">Warnings</div>
+  </div>
+  <div id="output-warnings" class="output-body"></div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <div class="panel-title">Intent</div>
+  </div>
+  <div id="output-intent" class="output-body"></div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <div class="panel-title">Explanation</div>
+  </div>
+  <div id="output-explanation" class="output-body"></div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <div class="panel-title">Match preview</div>
+    <div class="panel-subtle">Whole-sample match (w/ anchors)</div>
+  </div>
+  <div id="output-preview" class="output-body"></div>
+</div>
+
+
+        <div id="overlay-risks"></div>
+
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Bundled app -->
+  <script type="module" src="./dist/app.js?v=dev1"></script>
+</body>
+</html>

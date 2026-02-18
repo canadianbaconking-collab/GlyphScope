@@ -1,0 +1,7 @@
+user@example.com
+admin@frostedlogic.com
+test.user+filter@gmail.com
+invalid-email@
+@missinguser.com
+name@localhost
+name@domain.c

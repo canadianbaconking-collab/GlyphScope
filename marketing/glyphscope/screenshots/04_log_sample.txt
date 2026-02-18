@@ -1,0 +1,5 @@
+[INFO] 2026-02-01 - Service started
+[WARN] 2026-02-03 - Retry attempt
+[ERROR] 2026-02-04 - Connection failed
+[INFO] 2026-02-05 - Healthcheck ok
+[DEBUG] 2026-02-06 - This should NOT match
