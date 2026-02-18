@@ -4,21 +4,20 @@
  * Assumes 'regexpp' is available via ES module import (bundled).
  */
 
-import { parseRegExpLiteral } from "regexpp";
+import { RegExpParser } from "regexpp";
+
+const parser = new RegExpParser();
 
 export function parsePattern(patternBody, flagsStr = "") {
   try {
-    // Escape forward slashes to prevent breaking the literal construction
-    // e.g. "a/b" -> "/a\/b/g"
-    const escaped = patternBody.replace(/\//g, "\\/");
-    const literal = `/${escaped}/${flagsStr}`;
-    
-    // Parse
-    const ast = parseRegExpLiteral(literal);
+    // Validate exactly as the JS engine will compile user input.
+    // Pattern is always treated as a raw body, never as /.../flags.
+    new RegExp(patternBody, flagsStr);
+    const ast = parser.parsePattern(patternBody, 0, patternBody.length, flagsStr.includes("u"));
 
     return {
       ok: true,
-      ast: ast.pattern, // Return just the Pattern node
+      ast,
       normalizedFlags: flagsStr
     };
   } catch (err) {

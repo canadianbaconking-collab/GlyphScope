@@ -127,13 +127,5 @@ export function flagsToString(flags) {
 }
 
 export function normalizePatternInput(patternRaw) {
-  const s = String(patternRaw ?? "");
-  // If user pastes /.../flags, try to strip leading/trailing slashes safely (best-effort)
-  if (s.startsWith("/") && s.lastIndexOf("/") > 0) {
-    const last = s.lastIndexOf("/");
-    const body = s.slice(1, last);
-    // do not parse trailing flags here; UI handles flags separately
-    return body;
-  }
-  return s;
+  return String(patternRaw ?? "");
 }

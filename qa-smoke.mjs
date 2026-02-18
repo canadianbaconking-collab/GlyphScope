@@ -13,6 +13,7 @@ const cases = [
   { name: "alternation_heavy", pattern: "^(cat|dog|bird)(s)?$", sample: "dogs", flags: "", expect: "match" },
   { name: "nested_groups_quantifiers", pattern: "^((ab)+|cd){2,3}$", sample: "ababcd", flags: "", expect: "match" },
   { name: "classes_escapes", pattern: "\\b[\\w\\s]{3,}\\d\\b", sample: "abc 7", flags: "", expect: "match" },
+  { name: "url_with_slashes", pattern: "^https?:\\/\\/(?:www\\.)?[a-z0-9.-]+\\.[a-z]{2,}(?:\\/[^\\s]*)?$", sample: "HTTPS://www.example.com/path?q=1", flags: "i", expect: "match" },
   { name: "invalid_regex", pattern: "([a-z]", sample: "abc", flags: "", expect: "parse_error" }
 ];
 
